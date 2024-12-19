@@ -16,7 +16,7 @@ public class PointService {
     private final UserPointTable userPointTable;
     private final PointHistoryTable pointHistoryTable;
     private final ConcurrentHashMap<Long, ReentrantLock> lockMap = new ConcurrentHashMap<>();
-    private ReentrantLock lock;
+
 
     long MAX_POINT = 5_000_000;
 
@@ -32,7 +32,7 @@ public class PointService {
 
     public UserPoint addPoint(long userId, long amount) {
 
-            lock = lockMap.computeIfAbsent(userId, key -> new ReentrantLock());
+            ReentrantLock lock  = lockMap.computeIfAbsent(userId, key -> new ReentrantLock());
 
             if(amount > MAX_POINT) {
                 throw new IllegalArgumentException();
@@ -72,7 +72,7 @@ public class PointService {
 
     public UserPoint usePoint(long userId, long amount) {
 
-            lock = lockMap.computeIfAbsent(userId, key -> new ReentrantLock());
+            ReentrantLock lock = lockMap.computeIfAbsent(userId, key -> new ReentrantLock());
 
 
             if (amount > MAX_POINT) {
