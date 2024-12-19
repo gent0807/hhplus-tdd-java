@@ -19,7 +19,7 @@ public class PointServiceConcurrencyTest {
     private PointService pointService;
 
     @Test
-    void 동일한_id로_포인트가_충전_사용_시_정확한_값으로_계산되어야_한다() throws InterruptedException {
+    void 동일한_id로_동시에_포인트_충전_혹은_포인트_사용_시_정확한_값으로_계산되어야_한다() throws InterruptedException {
 
         long userId = 1L;
 
@@ -51,6 +51,43 @@ public class PointServiceConcurrencyTest {
                     .containsExactly(userId, 45L);
 
     }
+
+    @Test
+    void 서로_다른_id로_동시에_충전_혹은_사용_시_정확한_값으로_계산되야_한다() throws InterruptedException {
+        // given
+
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+
+        long addPoint = 100L;
+
+        long usePoint = 1L;
+
+        for(int i = 0; i <= 5; i++) {
+
+            long userId = i;
+
+            executor.submit(() -> {
+                UserPoint userPoint = pointService.addPoint(userId, addPoint);
+            });
+
+            executor.submit(() -> {
+                UserPoint userPoint = pointService.usePoint(userId, usePoint);
+            });
+        }
+
+        executor.shutdown();
+
+        assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+
+        for(int i = 0; i <= 5; i++) {
+            assertThat(pointService.selectById(i))
+                .extracting("id", "point")
+                    .containsExactly((long)i, addPoint - usePoint);
+        }
+
+    }
+
+
 
 
 
