@@ -20,6 +20,7 @@
   => 읽기-쓰기 lock 사용
 
 ## 자바 동시성 제어 
+자바도 위와 같은 이유들로 multi-thread를 이용하여 동시 작업을 수행할 수 있다.<br>
 
 자바 스레드를 동기화할 수 있는 대표적인 방식엔 Syncronized와 ReetrantLock이 있다.
 
