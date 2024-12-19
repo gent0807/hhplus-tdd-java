@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Service
@@ -14,7 +15,8 @@ public class PointService {
 
     private final UserPointTable userPointTable;
     private final PointHistoryTable pointHistoryTable;
-    private ReentrantLock lock = new ReentrantLock();
+    private final ConcurrentHashMap<Long, ReentrantLock> lockMap = new ConcurrentHashMap<>();
+    private ReentrantLock lock;
 
     long MAX_POINT = 5_000_000;
 
@@ -29,7 +31,8 @@ public class PointService {
     }
 
     public UserPoint addPoint(long userId, long amount) {
-        try {
+
+            lock = lockMap.computeIfAbsent(userId, key -> new ReentrantLock());
 
             if(amount > MAX_POINT) {
                 throw new IllegalArgumentException();
@@ -39,25 +42,28 @@ public class PointService {
                 throw new IllegalArgumentException();
             }
 
-            long point = userPointTable.selectById(userId).point();
-
-            if(point + amount > MAX_POINT) {
-                throw new IllegalArgumentException();
-            }
-
-
             lock.lock();
 
-            UserPoint userPoint = userPointTable.insertOrUpdate(userId, point + amount);
+            try {
 
-            pointHistoryTable.insert(userId, amount, TransactionType.CHARGE, userPoint.updateMillis());
+                long point = userPointTable.selectById(userId).point();
 
-            return userPoint;
+                if(point + amount > MAX_POINT) {
+                    throw new IllegalArgumentException();
+                }
 
 
-        }finally {
-            lock.unlock();
-        }
+
+                UserPoint userPoint = userPointTable.insertOrUpdate(userId, point + amount);
+
+                pointHistoryTable.insert(userId, amount, TransactionType.CHARGE, userPoint.updateMillis());
+
+                return userPoint;
+
+
+            }finally {
+                lock.unlock();
+            }
 
 
 
@@ -66,7 +72,9 @@ public class PointService {
 
     public UserPoint usePoint(long userId, long amount) {
 
-        try {
+            lock = lockMap.computeIfAbsent(userId, key -> new ReentrantLock());
+
+
             if (amount > MAX_POINT) {
                 throw new IllegalArgumentException();
             }
@@ -75,21 +83,24 @@ public class PointService {
                 throw new IllegalArgumentException();
             }
 
-            long point = userPointTable.selectById(userId).point();
-
-            if (point - amount < 0) {
-                throw new IllegalArgumentException();
-            }
 
             lock.lock();
 
-            UserPoint userPoint = userPointTable.insertOrUpdate(userId, point - amount);
+            try {
 
-            pointHistoryTable.insert(userId, amount, TransactionType.USE, userPoint.updateMillis());
+                long point = userPointTable.selectById(userId).point();
 
-            return userPoint;
-        }finally {
-            lock.unlock();
-        }
+                if (point - amount < 0) {
+                    throw new IllegalArgumentException();
+                }
+
+                UserPoint userPoint = userPointTable.insertOrUpdate(userId, point - amount);
+
+                pointHistoryTable.insert(userId, amount, TransactionType.USE, userPoint.updateMillis());
+
+                return userPoint;
+            }finally {
+                lock.unlock();
+            }
     }
 }
