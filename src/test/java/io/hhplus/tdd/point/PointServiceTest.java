@@ -128,6 +128,7 @@ public class PointServiceTest {
 
     }
 
+    @DisplayName("포인트_충전량의_모든_조건을_만족하면_포인트를_충전한다")
     @Test
     void 포인트_충전량의_모든_조건을_만족하면_포인트를_충전한다() {
 
@@ -153,6 +154,7 @@ public class PointServiceTest {
         Mockito.verify(userPointTable).insertOrUpdate(userId, changePoint);
     }
 
+    @DisplayName("포인트_충전량의_모든_조건을_만족하면_포인트를_충전하고_내역을_저장한다")
     @Test
     void 포인트_충전량의_모든_조건을_만족하면_포인트를_충전하고_내역을_저장한다() {
         long userId = 1L;
@@ -183,5 +185,98 @@ public class PointServiceTest {
         Mockito.verify(pointHistoryTable).insert(userId, amount, type, updateMillis);
     }
 
+    @DisplayName("포인트_사용량이_1보다_작은_경우_익셉션_발생")
+    @Test
+    void 포인트_사용량이_1보다_작은_경우_익셉션_발생() {
+        long userId = 100L;
+        long amount = 0;
 
+        assertThatIllegalArgumentException()
+                .isThrownBy(()->pointService.usePoint(userId, amount));
+    }
+
+    @Test
+    void 포인트_사용량이_최대치보다_큰_경우_익셉션_발생() {
+        long userId = 100L;
+        long amount = pointService.MAX_POINT + 1;
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(()->pointService.usePoint(userId, amount));
+
+    }
+
+    @DisplayName("입력된_id가_현재_보유한_포인트와_포인트_사용량의_감산_결과가_0보다_작은_경우_익셉션_발생")
+    @Test
+    void 입력된_id가_현재_보유한_포인트와_포인트_사용량의_감산_결과가_0보다_작은_경우_익셉션_발생() {
+
+        long userId = 1L;
+        long point = 1L;
+        long amount = 2L;
+        UserPoint userPoint = new UserPoint(userId, point, System.currentTimeMillis());
+
+        when(userPointTable.selectById(userId))
+                .thenReturn(userPoint);
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(()->pointService.usePoint(userId, amount));
+
+        Mockito.verify(userPointTable).selectById(userId);
+
+    }
+
+    @DisplayName("포인트_감산량의_모든_조건을_만족하면_포인트를_사용한다")
+    @Test
+    void 포인트_충전량의_모든_조건을_만족하면_포인트를_사용한다() {
+        long userId = 1L;
+        long point = pointService.MAX_POINT;
+        long amount = pointService.MAX_POINT - 1L;
+        long changePoint = point - amount;
+        UserPoint userPoint = new UserPoint(userId, point, System.currentTimeMillis());
+        UserPoint changeUserPoint = new UserPoint(userId, point-amount, System.currentTimeMillis());
+
+        when(userPointTable.selectById(userId))
+                .thenReturn(userPoint);
+
+        when(userPointTable.insertOrUpdate(userId, changePoint))
+                .thenReturn(changeUserPoint);
+
+        assertThat(pointService.usePoint(userId, amount))
+                .isEqualTo(changeUserPoint);
+
+        Mockito.verify(userPointTable).selectById(userId);
+        Mockito.verify(userPointTable).insertOrUpdate(userId, changePoint);
+
+
+    }
+
+    @DisplayName("포인트_사용량의_모든_조건을_만족하면_포인트를_사용하고_내역을_저장한다")
+    @Test
+    void 포인트_사용량의_모든_조건을_만족하면_포인트를_사용하고_내역을_저장한다() {
+        long userId = 1L;
+        long nowPoint = pointService.MAX_POINT;
+        long amount = pointService.MAX_POINT - 1L;
+        long changePoint = nowPoint - amount;
+        TransactionType type = TransactionType.USE;
+        long updateMillis = System.currentTimeMillis();
+
+        UserPoint userPoint = new UserPoint(userId, nowPoint, updateMillis);
+        UserPoint changeUserPoint = new UserPoint(userId, changePoint, updateMillis);
+        PointHistory pointHistory = new PointHistory(1L, userId, amount, type, updateMillis);
+
+        when(userPointTable.selectById(userId))
+                .thenReturn(userPoint);
+
+        when(userPointTable.insertOrUpdate(userId, changePoint))
+                .thenReturn(changeUserPoint);
+
+        when(pointHistoryTable.insert(userId, amount, type, updateMillis))
+                .thenReturn(pointHistory);
+
+        assertThat(pointService.usePoint(userId, amount))
+                .isEqualTo(changeUserPoint);
+
+        Mockito.verify(userPointTable).selectById(userId);
+        Mockito.verify(userPointTable).insertOrUpdate(userId, changePoint);
+        Mockito.verify(pointHistoryTable).insert(userId, amount, type, updateMillis);
+    }
 }
