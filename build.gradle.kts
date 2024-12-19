@@ -26,7 +26,9 @@ dependencies {
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     annotationProcessor(libs.spring.boot.configuration.processor)
+    testAnnotationProcessor(libs.lombok)
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.lombok)
 }
 
 // about source and compilation
