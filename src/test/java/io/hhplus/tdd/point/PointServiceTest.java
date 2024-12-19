@@ -2,23 +2,17 @@ package io.hhplus.tdd.point;
 
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
-import org.assertj.core.api.Assertions;
-import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 public class PointServiceTest {
@@ -88,6 +82,105 @@ public class PointServiceTest {
         Mockito.verify(pointHistoryTable).selectAllByUserId(userId);
 
 
+    }
+
+
+    @DisplayName("포인트_충전량이_포인트_최대치보다_큰_경우_익셉션_발생")
+    @Test
+    void 포인트_충전량이_포인트_최대치보다_큰_경우_익셉션_발생() {
+
+        long userId = 100L;
+        long amount = pointService.MAX_POINT + 1;
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(()->pointService.addPoint(userId, amount));
+
+
+    }
+
+    @DisplayName("포인트_충전량이_1보다_작은_경우_익셉션_발생")
+    @Test
+    void 포인트_충전량이_1보다_작은_경우_익셉션_발생() {
+
+        long userId = 100L;
+        long amount = 0;
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(()->pointService.addPoint(userId, amount));
+    }
+
+    @DisplayName("입력된_id가_현재_보유한_포인트와_포인트_충전량의_합산이_포인트의_최대치보다_큰_경우_익셉션_발생")
+    @Test
+    void 입력된_id가_현재_보유한_포인트와_포인트_충전량의_합산이_포인트의_최대치보다_큰_경우_익셉션_발생() {
+
+        long userId = 1L;
+        long point = 1L;
+        long amount = pointService.MAX_POINT;
+        UserPoint userPoint = new UserPoint(userId, point, System.currentTimeMillis());
+
+        when(userPointTable.selectById(userId))
+                .thenReturn(userPoint);
+
+        assertThatIllegalArgumentException()
+            .isThrownBy(()->pointService.addPoint(userId, amount));
+
+        Mockito.verify(userPointTable).selectById(userId);
+
+    }
+
+    @Test
+    void 포인트_충전량의_모든_조건을_만족하면_포인트를_충전한다() {
+
+        long userId = 1L;
+        long nowPoint = 1L;
+        long amount = pointService.MAX_POINT - 2L;
+        long changePoint = nowPoint + amount;
+        long updateMillis = System.currentTimeMillis();
+        UserPoint userPoint = new UserPoint(userId, nowPoint, updateMillis);
+        UserPoint changeUserPoint = new UserPoint(userId, changePoint, updateMillis);
+
+        when(userPointTable.selectById(userId))
+                .thenReturn(userPoint);
+
+        when(userPointTable.insertOrUpdate(userId, changePoint))
+                .thenReturn(changeUserPoint);
+
+        assertThat(pointService.addPoint(userId, amount))
+                .isEqualTo(changeUserPoint);
+
+        Mockito.verify(userPointTable).selectById(userId);
+
+        Mockito.verify(userPointTable).insertOrUpdate(userId, changePoint);
+    }
+
+    @Test
+    void 포인트_충전량의_모든_조건을_만족하면_포인트를_충전하고_내역을_저장한다() {
+        long userId = 1L;
+        long nowPoint = 1L;
+        long amount = pointService.MAX_POINT - 2L;
+        long changePoint = nowPoint + amount;
+        TransactionType type = TransactionType.CHARGE;
+        long updateMillis = System.currentTimeMillis();
+
+        UserPoint userPoint = new UserPoint(userId, nowPoint, updateMillis);
+        UserPoint changeUserPoint = new UserPoint(userId, changePoint, updateMillis);
+        PointHistory pointHistory = new PointHistory(1L, userId, amount, type, updateMillis);
+
+        when(userPointTable.selectById(userId))
+                .thenReturn(userPoint);
+
+        when(userPointTable.insertOrUpdate(userId, changePoint))
+                .thenReturn(changeUserPoint);
+
+        when(pointHistoryTable.insert(userId, amount, type, updateMillis))
+                .thenReturn(pointHistory);
+
+        assertThat(pointService.addPoint(userId, amount))
+                .isEqualTo(changeUserPoint);
+
+        Mockito.verify(userPointTable).selectById(userId);
+        Mockito.verify(userPointTable).insertOrUpdate(userId, changePoint);
+        Mockito.verify(pointHistoryTable).insert(userId, amount, type, updateMillis);
     }
 
 

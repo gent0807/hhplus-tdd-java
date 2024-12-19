@@ -25,6 +25,28 @@ public class PointService {
         return pointHistoryTable.selectAllByUserId(userId);
     }
 
+    public UserPoint addPoint(long userId, long amount) {
 
+        if(amount > MAX_POINT) {
+            throw new IllegalArgumentException();
+        }
+
+        if(amount < 1) {
+            throw new IllegalArgumentException();
+        }
+
+        long point = userPointTable.selectById(userId).point();
+
+        if(point + amount > MAX_POINT) {
+            throw new IllegalArgumentException();
+        }
+
+        UserPoint userPoint = userPointTable.insertOrUpdate(userId, point + amount);
+
+        pointHistoryTable.insert(userId, amount, TransactionType.CHARGE, userPoint.updateMillis());
+
+        return userPoint;
+
+    }
 
 }
