@@ -30,12 +30,13 @@ public class PointServiceTest {
     @Test
     void 임의의_long_type_값을_id에_입력하면_해당_id에_맞는_UserPoint가_return() {
 
-        long id = new Random().nextLong();
+        assertSelectUserPoint(new Random().nextLong(), 100L, System.currentTimeMillis());
 
-        long point = 100L;
+        assertSelectUserPoint( new Random().nextLong(), 1_000_000L, System.currentTimeMillis());
 
-        long updateMillis = System.currentTimeMillis();
+    }
 
+    private void assertSelectUserPoint(long id, long point, long updateMillis) {
         UserPoint userPoint = new UserPoint(id, point, updateMillis);
 
         // 의존 상황 설정, 의존 대상 실행
@@ -48,26 +49,6 @@ public class PointServiceTest {
                         .containsExactly(id, point, updateMillis);
 
         Mockito.verify(userPointTable).selectById(id);
-
-        // 다른 케이스도 하나 더 검사
-
-        id = new Random().nextLong();
-
-        point = 1_000_000L;
-
-        updateMillis = System.currentTimeMillis();
-
-        userPoint = new UserPoint(id, point, updateMillis);
-
-        when(userPointTable.selectById(id))
-                .thenReturn(userPoint);
-
-        assertThat(pointService.selectById(id))
-                .extracting("id", "point", "updateMillis")
-                .containsExactly(id, point, updateMillis);
-
-        Mockito.verify(userPointTable).selectById(id);
-
     }
 
 
