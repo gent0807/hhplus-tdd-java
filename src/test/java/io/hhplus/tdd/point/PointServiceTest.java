@@ -34,16 +34,18 @@ public class PointServiceTest {
 
         long point = 100L;
 
-        long time = System.currentTimeMillis();
+        long updateMillis = System.currentTimeMillis();
 
-        UserPoint userPoint = new UserPoint(id, point, time);
+        UserPoint userPoint = new UserPoint(id, point, updateMillis);
 
         // 의존 상황 설정, 의존 대상 실행
         when(userPointTable.selectById(id))
                 .thenReturn(userPoint);
 
         // 결과 확인
-        assertEquals(userPoint, pointService.selectById(id));
+        assertThat(pointService.selectById(id))
+                .extracting("id", "point", "updateMillis")
+                        .containsExactly(id, point, updateMillis);
 
         Mockito.verify(userPointTable).selectById(id);
 
@@ -53,12 +55,16 @@ public class PointServiceTest {
 
         point = 1_000_000L;
 
-        userPoint = new UserPoint(id, point, time);
+        updateMillis = System.currentTimeMillis();
+
+        userPoint = new UserPoint(id, point, updateMillis);
 
         when(userPointTable.selectById(id))
                 .thenReturn(userPoint);
 
-        assertEquals(userPoint, pointService.selectById(id));
+        assertThat(pointService.selectById(id))
+                .extracting("id", "point", "updateMillis")
+                .containsExactly(id, point, updateMillis);
 
         Mockito.verify(userPointTable).selectById(id);
 
