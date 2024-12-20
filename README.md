@@ -69,6 +69,7 @@ private static void incrementCounter() {
 * 하지만 synchronized와 다른 점은 ReetrantLock을 이용한 임계 구역 설정 시, 임계 구역에 도달한 thread가 해당 lock release되기 전<br>
 까지 기다리지 않고, 무시하고 지나가게 하는 등 성능 저하를 낮추고, 순서를 보장할 수 있다는 점이다.
 * ReentrantLock 객체를 생성하여 원하는 영역을 산정하여 lock 메소드와 unLock 메소드를 호출하여 임계 구역을 설정한다.
+  
   ```java
    private final ReentrantLock lock = new ReentrantLock();
   ```
@@ -156,7 +157,12 @@ public UserPoint usePoint(long userId, long amount) {
 
 * 임계 구역을 userPointTable, pointHistoryTable과 같이 공유되는 자원을 다루는 부분으로 산정하였다.
 
-* 단순 synchronized 키워드를 메소드에 사용할 경우, 두 메소드로 나뉘어져 있는 임계 구역이 같은 lock울 공유하기 때문에 
+* 단순 synchronized 키워드를 메소드에 사용했을 경우엔, addPoint 메소드의 임계구역과 userPoint의 임계 구역이 서로 같은 lock울 공유하기 때문에
+  한 쪽 메소드의 임계 구역이 lock이 걸리면 다른 한 쪽 메소드의 임계 구역도 같이 lock이 걸림으로써 서로 다른 userId를 갖는 thread가 각각 한 쪽의 메소드의
+  동시 접근 시 불필요하게 한 쪽 스레드가 대기해야하는 문제가 있습니다
+* 하지만 ReentrantLock과 ConcurrentHashMap을 이용해 userId마다의 ReentrantLock을 생성해 저장해놓고 임계 구역을 설정함으로써, 서로 다른 userId를 갖는 두 스레드가
+  각각 한 쪽 메소드의 임계 구역에 접근 시, 한 쪽 메소드의 임계 구역이 lock이 걸렸다는 이유로 불필요하게 다른 userId를 갖는 스레드까지 다른 한 쪽 메소드의 임계 구역에 접근하지 
+  못하는 상황을 없앨 수 있었습니다. 
 
 
 
