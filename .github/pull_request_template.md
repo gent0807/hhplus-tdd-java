@@ -1,4 +1,12 @@
 ### **커밋 링크**
+[Test]: PointService 포인트 사용 메서드 테스트 추가 : 35453f61
+[Feat]: ReentrantLock을 이용한 동시성 제어 적용 : 97a7f613dc
+[Fix]: ReetrantLock 임계 구역 재설정 : 1980cf34c55
+[Test]: PoinstService 동일 id 충전/사용 테스트 : 48148cf0c2
+[Fix]: ReentrantLock 메모리 전역이 아닌 지역으로 : 8c9561d31
+[Test]: 서로 다른 id로 동시 충전/사용 요청 테스트 : 04d601f29c
+
+
 동시성 처리 : 97a7f613dc, 1980cf34c, 8c9561d318
 
 동시성 테스트 : 48148cf0c21, 04d601f29
